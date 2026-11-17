@@ -1,3 +1,4 @@
+// vim: ts=4: 
 /*
  * Copyright (c) 2024 Your Name
  * SPDX-License-Identifier: Apache-2.0
@@ -18,10 +19,41 @@ module tt_um_fpga_io(
 
   // All output pins must be assigned. If not used, assign to 0.
   assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
+  //assign uio_out = 0;
   assign uio_oe  = 0;
 
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0};
+
+  // Integrate the eFGPA
+
+  //Config related ports
+  wire config_strobe;
+  wire [31:0] config_data;
+
+
+  my_eFPGA_top i_efpga (
+        //External IO port (dunno what this means)
+        .A_config_C		( ),
+        .B_config_C		( ),
+        .Config_accessC ( ),
+		// Actual I/O ports from the fabric
+        .I_top			( uio_out[7:0]),
+        .O_top			( uio_in[7:0] ),
+        .T_top			( uio_oe[7:0] ),
+        // System
+        .CLK			( clk ),
+        .resetn			( rst_n ),
+		// Parallel config (Use this)
+        .SelfWriteStrobe( config_strobe ),
+        .SelfWriteData	( config_data ),
+		// Rs232 config n/a
+        .Rx				( 1'b0 ),
+        .ComActive		( ),
+        .ReceiveLED		( ),
+		// bitbang n/a
+        .s_clk			( 1'b0 ),
+        .s_data			( 1'b0 )
+	);
 
 endmodule
