@@ -3,7 +3,7 @@ project:
   title:        "eFGPA I/O chip"      # Project title
   author:       "Eric Pearson"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "eFGPA with SPI port for CPU access. Intended as generlized I/O device"      # One line description of what your project does
+  description:  "SPI hosted eFPGA for generlized I/O"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     24       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -18,14 +18,15 @@ project:
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "project.v"
+    - "eFPGA_top.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: "en"
-  ui[1]: ""
-  ui[2]: ""
+  ui[0]: "spi_ck"
+  ui[1]: "spi_cs"
+  ui[2]: "spi_mosi"
   ui[3]: ""
   ui[4]: ""
   ui[5]: ""
@@ -33,9 +34,9 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: "led"
-  uo[1]: ""
-  uo[2]: ""
+  uo[0]: "spi_miso"
+  uo[1]: "config_led"
+  uo[2]: "run_led"
   uo[3]: ""
   uo[4]: ""
   uo[5]: ""
@@ -43,14 +44,14 @@ pinout:
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
-  uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
+  uio[0]: "gpio_0"
+  uio[1]: "gpio_1"
+  uio[2]: "gpio_2"
+  uio[3]: "gpio_3"
+  uio[4]: "gpio_4"
+  uio[5]: "gpio_5"
+  uio[6]: "gpio_6"
+  uio[7]: "gpio_7"
 
 # Do not change!
 yaml_version: 6
