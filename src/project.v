@@ -53,7 +53,16 @@ module tt_um_fpga_io(
         .ReceiveLED		( ),
 		// bitbang n/a
         .s_clk			( 1'b0 ),
-        .s_data			( 1'b0 )
+        .s_data			( 1'b0 ),
+		// Backdoor
+    	.bd0_din(  32'b0 ),
+    	.bd0_dout( ),
+    	.bd0_radr( ),
+    	.bd0_wadr( ),
+    	.bd1_din(  32'b0 ),
+    	.bd1_dout( ),
+    	.bd1_radr( ),
+    	.bd1_wadr( )
 	);
 
 endmodule

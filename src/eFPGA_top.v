@@ -27,7 +27,16 @@ module my_eFPGA_top
         output  ComActive,
         output  ReceiveLED,
         input  s_clk,
-        input  s_data
+        input  s_data,
+		// Backdoor sram port connections
+        input  wire [31:0] bd0_din ,
+        output wire [31:0] bd0_dout,
+        input  wire [7:0]  bd0_radr,
+        input  wire [7:0]  bd0_wadr,
+        input  wire [31:0] bd1_din ,
+        output wire [31:0] bd1_dout,
+        input  wire [7:0]  bd1_radr,
+        input  wire [7:0]  bd1_wadr
 );
  //BlockRAM ports
 
@@ -470,8 +479,7 @@ eFPGA eFPGA_inst (
     .FrameStrobe(FrameSelect)
 );
 
-
-BlockRAM_1KB Inst_BlockRAM_0 (
+my_BlockRAM_1KB Inst_BlockRAM_0 (
     .clk(CLK),
     .rd_addr(FAB2RAM_A_O[7:0]),
     .rd_data(RAM2FAB_D_I[31:0]),
@@ -482,10 +490,14 @@ BlockRAM_1KB Inst_BlockRAM_0 (
     .C2(FAB2RAM_C_O[2]),
     .C3(FAB2RAM_C_O[3]),
     .C4(FAB2RAM_C_O[4]),
-    .C5(FAB2RAM_C_O[5])
+    .C5(FAB2RAM_C_O[5]),
+	.bd_din(  bd0_din ),
+	.bd_dout( bd0_dout),
+	.bd_radr( bd0_radr),
+	.bd_wadr( bd0_wadr)
 );
 
-BlockRAM_1KB Inst_BlockRAM_1 (
+my_BlockRAM_1KB Inst_BlockRAM_1 (
     .clk(CLK),
     .rd_addr(FAB2RAM_A_O[23:16]),
     .rd_data(RAM2FAB_D_I[63:32]),
@@ -496,7 +508,11 @@ BlockRAM_1KB Inst_BlockRAM_1 (
     .C2(FAB2RAM_C_O[10]),
     .C3(FAB2RAM_C_O[11]),
     .C4(FAB2RAM_C_O[12]),
-    .C5(FAB2RAM_C_O[13])
+    .C5(FAB2RAM_C_O[13]),
+	.bd_din(  bd1_din ),
+	.bd_dout( bd1_dout),
+	.bd_radr( bd1_radr),
+	.bd_wadr( bd1_wadr)
 );
 
 assign FrameData = {32'h12345678,FrameRegister,32'h12345678};
