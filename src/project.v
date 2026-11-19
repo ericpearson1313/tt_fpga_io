@@ -58,11 +58,7 @@ module tt_um_fpga_io(
     	.bd0_din(  32'b0 ),
     	.bd0_dout( ),
     	.bd0_radr( ),
-    	.bd0_wadr( ),
-    	.bd1_din(  32'b0 ),
-    	.bd1_dout( ),
-    	.bd1_radr( ),
-    	.bd1_wadr( )
+    	.bd0_wadr( )
 	);
 
 endmodule

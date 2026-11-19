@@ -4,8 +4,8 @@ module bram	#(
         parameter LOC = 0,
         parameter IN_REG = 1'b0,
         parameter OUT_REG = 1'b0,
-        localparam DEV_HEIGHT = 4,
-        localparam BRAM_X = 5,
+        localparam DEV_HEIGHT = 2,
+        localparam BRAM_X = 3,
     ) (
         input clk,
         input [7:0] waddr, raddr, cfg,
@@ -45,9 +45,9 @@ endmodule
 
 module sequential_16bit_en (
     input wire clk,
-    input wire [7:0] io_in,
-    output wire [7:0] io_out,
-    output wire [7:0] io_oeb
+    input wire [3:0] io_in,
+    output wire [3:0] io_out,
+    output wire [3:0] io_oeb
 );
     wire rst = io_in[0];
     wire en = io_in[1];
@@ -59,8 +59,8 @@ module sequential_16bit_en (
             else ctr <= ctr + 1'b1;
         else ctr <= ctr;
 
-    assign io_out = ctr;
-    assign io_oeb = 1;
+    assign io_out = ctr[3:0];
+    assign io_oeb = 4'b0001;
 
 	// make a RAM port??
 
