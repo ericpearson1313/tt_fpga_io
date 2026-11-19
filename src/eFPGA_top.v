@@ -31,12 +31,12 @@ module my_eFPGA_top
 		// Backdoor sram port connections
         input  wire [31:0] bd0_din ,
         output wire [31:0] bd0_dout,
-        input  wire [7:0]  bd0_radr,
-        input  wire [7:0]  bd0_wadr,
+        output wire [7:0]  bd0_radr,
+        output wire [7:0]  bd0_wadr,
         input  wire [31:0] bd1_din ,
         output wire [31:0] bd1_dout,
-        input  wire [7:0]  bd1_radr,
-        input  wire [7:0]  bd1_wadr
+        output wire [7:0]  bd1_radr,
+        output wire [7:0]  bd1_wadr
 );
  //BlockRAM ports
 
