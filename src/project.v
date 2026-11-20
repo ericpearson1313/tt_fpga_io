@@ -61,4 +61,11 @@ module tt_um_fpga_io(
     	.bd0_wadr( )
 	);
 
+	// Integrate a SPI logic
+
+	// Itegrate a ratio pwm (CMD=1, N[15:0], D[15:0])
+	wire pwm;
+	reg [15:0] num, den;
+	recip_pwm #( 16 ) i_pwm0 ( clk, !rst_n, num, den, pwm );
+
 endmodule
