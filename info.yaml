@@ -22,6 +22,7 @@ project:
     - "BlockRAM_1KB.v" # modfiedd from fabulous generated, sram removed, ports added
     - "latchmap.v"     # replaces fabulous generated
     - "ratio_pwm.v"
+    - "../fabulous/efpga/user_design/micro_uart.v" # user_design
     - "../fabulous/efpga/Test/build/fabric_files/bitbang.v"
     - "../fabulous/efpga/Test/build/fabric_files/Config_access.v"
     - "../fabulous/efpga/Test/build/fabric_files/ConfigFSM.v"
