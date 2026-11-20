@@ -1,3 +1,4 @@
+// vim: ts=4: 
 `default_nettype none
 
 module bram	#(
@@ -49,57 +50,52 @@ module micro_uart (
     output wire [3:0] io_out,
     output wire [3:0] io_oeb
 );
-    wire rx;
+	// Connect up eFPGA's real I/O
+    wire rx; // rs232 rx input
     assign rx = io_in[0];
-    assign io_out = { 2'b00, rx, 1'b0 };
-    assign io_oeb = { 4'b1001 };
+    assign io_out = { 2'b00, rx, 1'b0 }; // loopback rx
+    assign io_oeb = { 4'b1001 }; // output disable Rx
 
     // metastable
     reg [1:0] cc;
     always @(posedge clk)
-	cc[1:0] <= { cc[0], rx };
+		cc[1:0] <= { cc[0], rx };
 
-    // filter
+	// external provided baud rate enable
+	reg baudx8;
+
+	// Delay 
     reg del;
-    always @(posedge clk)
-	del <= cc[1];
+    always @(posedge clk) 
+		del <= ( baudx8 ) ? cc[1] : del;
 
+	// Filtered
     reg rxf;
     always @(posedge clk)
-	rxf <= ( !del && !cc[1] ) ? 1'b0 : ( del && cc[1] ) ? 1'b1 : rxf;
+		rxf <= ( baudx8 && !del && !cc[1] ) ? 1'b0 : ( baudx8 && del && cc[1] ) ? 1'b1 : rxf;
 
-    // Edge
-    wire fall; // start on falling edge
+    // Falling Edge flag for start bit detection
+    wire fall; 
     assign fall = ( rxf && !del && !cc[1] ) ? 1'b1 : 1'b0;
 
-    // sample counter, bit coAunter
-    reg active;
-    reg [6:0] hbaud; // 104 counts for 115.2Kbaud x2
-    wire tick;
-    assign tick = ( hbaud == (104-1) ) ? 1'b1 : 1'b0;
+    // counter
+    reg [6:0] count; // from -13 to 56, with sampels at 0, 8, ... 56.
     always @(posedge clk)
-        hbaud <= ( !active ) ? 0 : ( tick ) ? 0 : hbaud + 1;
+		count <= ( !baudx8 ) ? count : ( count[6:2]  == -4 && fall ) ? 1 : ( count[6:3] == 7 ) ? -13 : count + 1;
 
-    reg [4:0] htick; // counts events periods 
-    always @(posedge clk)
-	htick <= ( !active ) ? 0 : ( tick ) ? htick + 1 : htick;
-
-    wire done;
-    assign done = ( tick && htick == 16 ) ? 1'b1 : 1'b0;
-
-    always @(posedge clk)
-	active <= ( done ) ? 0 : fall ? 1 : active;
 
     // sample at 2, 4, 6, ... 16
 	wire sample;
-    assign sample = ( tick && !htick[0] && htick >= 2 && htick <= 16) ? 1'b1 : 1'b0;
-	
-    // Uart Data regh
-    reg [7:0] data_reg;
-    always @(posedge clk) begin
-	data_reg <= ( sample ) ? { rxf, data_reg[7:1] } : data_reg;
-    end
+    assign sample = ( baudx8 && !count[6] && count[2:0] == 0 ) ? 1'b1 : 1'b0;
 
+	// generated from last sample
+	wire last;
+	assign last = ( baudx8 && count == 56 ) ? 1'b1 : 1'b0;
+
+    // Uart Data reg
+    reg [7:0] data_reg;
+    always @(posedge clk) 
+		data_reg <= ( sample ) ? { rxf, data_reg[7:1] } : data_reg;
 
 	// The bram is our conestion to the asic
 	wire [31:0] port_dout;  // efgpa output wires
@@ -115,12 +111,13 @@ module micro_uart (
     	    .rdata( port_din  )
 	);
 
-	wire flag;
-	assign flag = ( tick && htick == 16 ) ? 1'b1 : 1'b0;
-	
 	assign port_dout[31:9] = 0;
 	assign port_dout[8:1] = { rxf, data_reg[7:1] };
-	assign port_dout[0]   = flag; // write the word to the mailbox
+	assign port_dout[0]   = last; // write the word to the mailbox
+
+	// connect up baud rate input
+    always @(posedge clk)
+		baudx8 <= port_din[0];
 
 endmodule
 `resetall
