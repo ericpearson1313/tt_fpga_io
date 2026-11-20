@@ -31,16 +31,36 @@ module tt_um_fpga_io(
   wire config_strobe;
   wire [31:0] config_data;
 
+  // tie off undriven I/O 
+	assign uio_out[7:4] = 0;
+	assign uio_oe[7:4] = 0;
 
+	// invert iob
+	wire [3:0] uio_oeb;
+	assign uio_oe[3:0] = ~uio_oeb;
+
+    // efpga fabric's user_design's data port
+   	wire [31:0] efpga_din, efpga_dout;
+`define EMU_UART
+`ifdef EMU_UART
+  	micro_uart i_uart (
+    	.clk,
+    	.io_in(  uio_in[3:0] ),
+    	.io_out( uio_out[3:0] ),
+    	.io_oeb( uio_oeb[3:0] ),
+        .port_din(  efpga_din ),
+    	.port_dout( efpga_dout )
+	);
+`else // eFPGA
   my_eFPGA_top i_efpga (
         //External IO port (dunno what this means)
         .A_config_C		( ),
         .B_config_C		( ),
         .Config_accessC ( ),
 		// Actual I/O ports from the fabric
-        .I_top			( uio_out[7:0]),
-        .O_top			( uio_in[7:0] ),
-        .T_top			( uio_oe[7:0] ),
+        .I_top			( uio_out[3:0] ),
+        .O_top			( uio_in[3:0]  ),
+        .T_top			( uio_oeb[3:0] ),
         // System
         .CLK			( clk ),
         .resetn			( rst_n ),
@@ -55,11 +75,12 @@ module tt_um_fpga_io(
         .s_clk			( 1'b0 ),
         .s_data			( 1'b0 ),
 		// Backdoor
-    	.bd0_din(  32'b0 ),
-    	.bd0_dout( ),
+    	.bd0_din(  efpga_din ),
+    	.bd0_dout( efpga_dout ),
     	.bd0_radr( ),
     	.bd0_wadr( )
 	);
+`endif // EMU
 
 	// Integrate a SPI logic
 

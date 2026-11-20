@@ -7,8 +7,10 @@ FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = project.v 
-PROJECT_SOURCES += eFPGA_top.v BlockRAM_1KB.v latchmap.v ratio_pwm.v
+PROJECT_SOURCES += eFPGA_top.v BlockRAM_1KB.v latchmap.v ratio_pwm.v 
 PROJECT_SOURCES += $(wildcard ../fabulous/efpga/Test/build/fabric_files/*.v)
+PROJECT_SOURCES += ../fabulous/efpga/user_design/micro_uart.v 
+
 
 ifneq ($(GATES),yes)
 
