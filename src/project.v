@@ -41,6 +41,7 @@ module tt_um_fpga_io(
 
     // efpga fabric's user_design's data port
    	wire [31:0] efpga_din, efpga_dout;
+
 `define EMU_UART
 `ifdef EMU_UART
   	micro_uart i_uart (
@@ -87,6 +88,10 @@ module tt_um_fpga_io(
 	// Itegrate a ratio pwm (CMD=1, N[15:0], D[15:0])
 	wire pwm;
 	reg [15:0] num, den;
+	assign num = 0;
+	assign den = 0;
 	recip_pwm #( 16 ) i_pwm0 ( clk, !rst_n, num, den, pwm );
+
+	assign efpga_din = { pwm, 31'b0 };
 
 endmodule
