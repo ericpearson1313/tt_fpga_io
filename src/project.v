@@ -30,6 +30,8 @@ module tt_um_fpga_io(
   //Config related ports
   wire config_strobe;
   wire [31:0] config_data;
+	assign config_strobe = 0;
+	assign config_data = 32'b0;
 
   // tie off undriven I/O 
 	assign uio_out[7:4] = 0;
@@ -42,7 +44,7 @@ module tt_um_fpga_io(
     // efpga fabric's user_design's data port
    	wire [31:0] efpga_din, efpga_dout;
 
-`define EMU_UART
+//`define EMU_UART
 `ifdef EMU_UART
   	micro_uart i_uart (
     	.clk,
