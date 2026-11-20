@@ -17,11 +17,11 @@ project:
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "project.v"
+    - "project.v"      # top level of the TT chip, spi logic and efpga integrated.
     - "eFPGA_top.v"    # modfiied from fabulous generated to add ports.
     - "BlockRAM_1KB.v" # modfiedd from fabulous generated, sram removed, ports added
     - "latchmap.v"     # replaces fabulous generated
-    - "ratio_pwm.v"
+    - "ratio_pwm.v"    # Handy pwm
     - "../fabulous/efpga/user_design/micro_uart.v" # user_design
     - "../fabulous/efpga/Test/build/fabric_files/bitbang.v"
     - "../fabulous/efpga/Test/build/fabric_files/Config_access.v"
