@@ -18,7 +18,7 @@ module tt_um_fpga_io(
 );
 
   // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+  //assign uo_out  = ui_in + uio_in + sreg3[31];  // Example: ou_out is the sum of ui_in and uio_in
   //assign uio_out = 0;
   //assign uio_oe  = 0;
 
@@ -30,8 +30,12 @@ module tt_um_fpga_io(
   //Config related ports
   wire config_strobe;
   wire [31:0] config_data;
-	assign config_strobe = 0;
-	assign config_data = 32'b0;
+	// temp tie off input/output sreg
+	reg [32:0] sreg2;
+	always @(posedge clk)
+		sreg2 <= { sreg2[31:0], ui_in[1] };
+	assign config_strobe = sreg2[32]; //0;
+	assign config_data = sreg2[31:0]; //32'b0;
 
   // tie off undriven I/O 
 	assign uio_out[7:4] = 0;
@@ -85,15 +89,24 @@ module tt_um_fpga_io(
 	);
 `endif // EMU
 
+	// temp tie off input/output sreg
+	reg [63:0] sreg1;
+	always @(posedge clk)
+		sreg1 <= { sreg1[62:0], ui_in[0] };
+	reg [31:0] sreg3;
+	always @(posedge clk)
+		sreg3 <= ( ui_in[2] ) ? efpga_dout : { sreg3[30:0], ui_in[3] };
+
+    assign uo_out  = ui_in + uio_in + sreg3[31];  // Example: ou_out is the sum of ui_in and uio_in
 	// Integrate a SPI logic
 
 	// Itegrate a ratio pwm (CMD=1, N[15:0], D[15:0])
 	wire pwm;
 	reg [15:0] num, den;
-	assign num = 0;
-	assign den = 0;
+	assign num = sreg1[15:0]; //0;
+	assign den = sreg1[31:16]; //0;
 	recip_pwm #( 16 ) i_pwm0 ( clk, !rst_n, num, den, pwm );
 
-	assign efpga_din = { pwm, 31'b0 };
+	assign efpga_din = { pwm, 31'b0 } | sreg1[63:32];
 
 endmodule
