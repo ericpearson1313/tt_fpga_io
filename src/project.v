@@ -18,7 +18,7 @@ module tt_um_fpga_io(
 );
 
   	// All output pins must be assigned. If not used, assign to 0.
-  	assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+  	assign uo_out[7:3]  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
 	assign uio_out[7:4] = 0;
 	assign uio_oe[7:4] = 0;
 
@@ -31,6 +31,12 @@ module tt_um_fpga_io(
 	//
 	//////////////////////////////////////////////////
 
+	// User Leds
+	wire config_led;
+	wire run_led;
+	assign uo_out[1] = config_led;
+	assign uo_out[2] = 1; // run_led;
+	
   	//Config related ports
   	wire config_strobe;
   	wire [31:0] config_data;
@@ -96,6 +102,11 @@ module tt_um_fpga_io(
 	wire spi_mosi;
 	wire spi_miso;
 	
+	assign spi_clk = ui_in[0];
+	assign spi_ncs = ui_in[1];
+	assign spi_mosi= ui_in[2];
+	assign uo_out[0] = spi_miso;
+
 	// Metastable spi inputs
 	reg [8:0] spi_cc;
 	always @(posedge clk) 
@@ -129,6 +140,10 @@ module tt_um_fpga_io(
 	reg byte_strobe;
 	always @(posedge clk)
 		byte_strobe <= ( clk_rise && !filt_ncs && spi_bitcount[2:0]  == 7 ) ? 1'b1 : 1'b0;
+
+	
+	// turn on config led when loading fpga bitstream
+	assign config_led = ( !filt_ncs && cmd_data == 8'b0 && spi_bitcount > 7 ) ? 1'b1 : 1'b0;
 
 	// shift in data upon ncs, and count bits
 
