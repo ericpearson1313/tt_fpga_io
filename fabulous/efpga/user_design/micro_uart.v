@@ -10,9 +10,15 @@ module micro_uart (
     output wire [3:0] io_oeb
 `ifdef EMU_UART
     ,input wire [31:0] port_din,
-	output wire [31:0] port_dout
+	output wire [31:0] port_dout,
+	input wire reset
+	);
+`else
+	);
+	wire reset;
+	assign reset = 0;
 `endif
-);
+
 	// Connect up eFPGA's real I/O
     wire rx; // rs232 rx input
     assign rx = io_in[0];
@@ -22,7 +28,7 @@ module micro_uart (
     // metastable
     reg [1:0] cc;
     always @(posedge clk)
-		cc[1:0] <= { cc[0], rx };
+		cc[1:0] <= ( reset ) ? 2'b11 : { cc[0], rx };
 
 	// external provided baud rate enable
 	reg baudx8;
@@ -30,22 +36,24 @@ module micro_uart (
 	// Delay 
     reg del;
     always @(posedge clk) 
-		del <= ( baudx8 ) ? cc[1] : del;
+		del <= ( reset ) ? 1'b1 : ( baudx8 ) ? cc[1] : del;
 
 	// Filtered
     reg rxf;
     always @(posedge clk)
-		rxf <= ( baudx8 && !del && !cc[1] ) ? 1'b0 : ( baudx8 && del && cc[1] ) ? 1'b1 : rxf;
+		rxf <= ( reset ) ? 1'b1 : ( baudx8 && !del && !cc[1] ) ? 1'b0 : ( baudx8 && del && cc[1] ) ? 1'b1 : rxf;
 
     // Falling Edge flag for start bit detection
     wire fall; 
-    assign fall = ( rxf && !del && !cc[1] ) ? 1'b1 : 1'b0;
+    assign fall = ( reset ) ? 1'b0 : ( rxf && !del && !cc[1] ) ? 1'b1 : 1'b0;
 
     // counter
-    reg [6:0] count; // from -13 to 56, with sampels at 0, 8, ... 56.
+    reg [6:0] count; // from -14 to 56, with sampels at 0, 8, ... 56.
+	// if -13 don't count until fall, else count until 56 teh -13
     always @(posedge clk)
-		count <= ( !baudx8 ) ? count : ( count[6:2]  == -4 && fall ) ? 1 : ( count[6:3] == 7 ) ? -13 : count + 1;
-
+		count <= 	( reset ) ? -13 : 
+				    ( count[6:2] == 5'b11100 && !fall || !baudx8         ) ? count  	:
+					( count[6:2] == 5'b11100 &&  fall || count[6:3] != 7 ) ? count+1  : -13;
 
     // sample at 2, 4, 6, ... 16
 	wire sample;
@@ -53,12 +61,13 @@ module micro_uart (
 
 	// generated from last sample
 	wire last;
-	assign last = ( baudx8 && count == 56 ) ? 1'b1 : 1'b0;
+	assign last = ( baudx8 && count[6:3] == 7 ) ? 1'b1 : 1'b0;
 
     // Uart Data reg
     reg [7:0] data_reg;
+	initial data_reg = 0;
     always @(posedge clk) 
-		data_reg <= ( sample ) ? { rxf, data_reg[7:1] } : data_reg;
+		data_reg <= ( reset ) ? 0 : ( sample ) ? { rxf, data_reg[7:1] } : data_reg;
 
 	// The bram is our conestion to the asic
 
@@ -77,13 +86,18 @@ module micro_uart (
 	);
 `endif
 
-	assign port_dout[31:9] = 0;
-	assign port_dout[8:1] = { rxf, data_reg[7:1] };
-	assign port_dout[0]   = last; // write the word to the mailbox
+	assign port_dout[31:16] = 0;
+	assign port_dout[15:8] = { rxf, data_reg[7:1] };
+	assign port_dout[7:1]  = 0;
+	assign port_dout[0]    = last; // write the word to the mailbox
 
 	// connect up baud rate input
     always @(posedge clk)
-		baudx8 <= port_din[0];
+		baudx8 <= port_din[31];
+
+	// Connect up swap strobe from asic
+	wire swap_strobe;
+	assign swap_strobe = port_din[0];
 
 endmodule
 `resetall
