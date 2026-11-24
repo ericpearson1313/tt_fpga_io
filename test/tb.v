@@ -52,9 +52,10 @@ module tb ();
 	// 16 baud pattern:  start, b0, b1, b2, b3, b4, b5, b6, b7, stop, {6{idle}}
 	reg en_rs232;
 	always @(posedge clk) begin
-		baud_count <= (!rst_n) ? 0 : ( baud_count == 31 ) ? 0 : baud_count+1;
+		baud_count <= (!rst_n || !en_rs232 ) ? 0 : ( baud_count == 31 ) ? 0 : baud_count+1;
 		bit_count <= ( !rst_n || !en_rs232 ) ? 0 : ( baud_count == 31 ) ? bit_count+1 : bit_count; // just wraps
-		rs232 	<= ( bit_count[3:0] == 0 ) ? 0 : // start bitA
+		rs232 	<=   (!en_rs232            ) ? 1 : // idle
+                     ( bit_count[3:0] == 0 ) ? 0 : // start bitA
 					 ( bit_count[3:0] == 9 ) ? 1 : // stop
 					 ( bit_count[3:0] >  9 ) ? 1 : // idle
 					     			str[str_idx];  // Otherwise a valid bit is ready.
@@ -108,16 +109,15 @@ module tb ();
 			@(negedge spi_clk);
 		end
 		// Send the binary data
-    	while (1) begin
-        	c = $fgetc(fd);
-        	if (c == -1)
-            	break;      // EOF reached
+        c = $fgetc(fd);
+    	while ( c != -1 ) begin
         	$display("Read byte = %02x", c[7:0]);
 			ch = c;
 			for( ii = 0; ii < 8; ii = ii + 1 ) begin // msb first
 				spi_mosi = ch[7-ii];
 				@(negedge spi_clk);
 			end
+        	c = $fgetc(fd);
 		end
     	$fclose(fd);
 		spi_mosi = 0;
