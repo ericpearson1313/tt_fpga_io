@@ -47,6 +47,7 @@ module tt_um_fpga_io(
 
     // efpga fabric's user_design's data port
    	wire [31:0] efpga_din, efpga_dout;
+	reg nrst_config;
 
 `define EMU_UART
 `ifdef EMU_UART
@@ -72,7 +73,7 @@ module tt_um_fpga_io(
         .T_top			( uio_oeb[3:0] ),
         // System
         .CLK			( clk ),
-        .resetn			( rst_n ),
+        .resetn			( rst_n & nrst_config ),
 		// Parallel config (Use this)
         .SelfWriteStrobe( config_strobe ),
         .SelfWriteData	( config_data ),
@@ -164,11 +165,13 @@ module tt_um_fpga_io(
 	wire we_fabric; // load fabric data iin reg
 	wire re_fabric; // fabic data out reg will be registered based on en=rd
 
-	assign we_config 	= ( byte_strobe && cmd_data == 8'h00 && spi_bitcount >= 40 && spi_bitcount[4:0] == 0) ? 1'b1 : 1'b0;
+	assign we_config 	= ( byte_strobe && cmd_data == 8'h00 && spi_bitcount >= 40 && spi_bitcount[4:0] == 8) ? 1'b1 : 1'b0;
 	assign we_pwm 		= ( byte_strobe && cmd_data == 8'h01 && spi_bitcount == 40 ) ? 1'b1 : 1'b0;
 	assign we_fabric 	= ( byte_strobe && cmd_data == 8'h02 && spi_bitcount == 40 ) ? 1'b1 : 1'b0;
 	assign re_fabric    = ( byte_strobe && cmd_data == 8'd02 && spi_bitcount == 8  ) ? 1'b1 : 1'b0;
 
+	always @(posedge clk) 
+		nrst_config	<= ( cmd_data == 8'h00 && spi_bitcount >= 16 && spi_bitcount < 24 ) ? 1'b0 : 1'b1;
 
 	//////////////////////////////////////////////////
 	// eFPGA config interface
