@@ -171,7 +171,7 @@ module tb ();
 		for( ii = 0; ii < 8; ii = ii + 1 ) // First byte 00
 			@(negedge spi_clk);
 
-		for( ; ; ) begin // Polling loop
+		while( 1 ) begin // Polling loop foreever
 			spi_mosi = 0;
 			spi_ncs  = 0;
 			ch = 2; // cmd byte
