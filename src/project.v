@@ -130,7 +130,7 @@ module tt_um_fpga_io(
 	// Bit counter count active bits
 	reg [15:0] spi_bitcount;
 	always @(posedge clk)
-		spi_bitcount <= ( !rst_n ) ? 0 : ( !clk_rise ) ? spi_bitcount : ( !filt_ncs ) ? spi_bitcount : 0;
+		spi_bitcount <= ( !rst_n ) ? 0 : ( !clk_rise ) ? spi_bitcount : ( !filt_ncs ) ? spi_bitcount + 1 : 0;
 	
 
 	// First byte is CMD (msb first)
@@ -211,6 +211,6 @@ module tt_um_fpga_io(
 	always @(posedge clk)
 		spi_oreg <= ( !rst_n ) ? 0 : ( re_fabric ) ? efpga_dout_reg : ( clk_rise && !filt_ncs ) ? { spi_oreg[30:0], 1'b0 } : spi_oreg;
 	// Spi output
-	assign spi_miso = spi_oreg[31:0];
+	assign spi_miso = spi_oreg[31];
 
 endmodule
