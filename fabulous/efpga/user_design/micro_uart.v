@@ -78,15 +78,15 @@ module micro_uart (
     	    .LOC(0)
 	) ram0 (
     	    .clk(clk),
-    	    .waddr( 8'b0 ),
-    	    .raddr( 8'b0 ),
+    	    .waddr( 8'hAB ),
+    	    .raddr( 8'hCD ),
     	    .cfg  ( 8'b00010000),
     	    .wdata( port_dout ),
     	    .rdata( port_din  )
 	);
 `endif
 
-	assign port_dout[31:16] = 0;
+	assign port_dout[31:16] = 16'hABCD;
 	assign port_dout[15:8] = { rxf, data_reg[7:1] };
 	assign port_dout[7:1]  = 0;
 	assign port_dout[0]    = last; // write the word to the mailbox

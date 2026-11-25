@@ -129,10 +129,24 @@ module my_BlockRAM_1KB #(
     );
 `else
 	// Top level back door probes to get at address data;
-	assign mem_dout     = bd_din[31:0];
-	assign bd_dout[31:0]= muxed_data_in;
-	assign bd_radr[7:0] = rd_addr[7:0];
-	assign bd_wadr[7:0] = wr_addr[7:0];
+	assign mem_dout[31:16]={ bd_din[16], bd_din[17], bd_din[18], bd_din[19], 
+			         bd_din[20], bd_din[21], bd_din[22], bd_din[23], 
+			         bd_din[24], bd_din[25], bd_din[26], bd_din[27], 
+			         bd_din[28], bd_din[29], bd_din[30], bd_din[31]};
+	assign mem_dout[15:00]={ bd_din[00], bd_din[01], bd_din[02], bd_din[03], 
+			         bd_din[04], bd_din[05], bd_din[06], bd_din[07], 
+			         bd_din[08], bd_din[09], bd_din[10], bd_din[11], 
+			         bd_din[12], bd_din[13], bd_din[14], bd_din[15]};
+	assign bd_dout[31:16]= { muxed_data_in[16], muxed_data_in[17], muxed_data_in[18], muxed_data_in[19], 
+			         muxed_data_in[20], muxed_data_in[21], muxed_data_in[22], muxed_data_in[23], 
+			         muxed_data_in[24], muxed_data_in[25], muxed_data_in[26], muxed_data_in[27], 
+			         muxed_data_in[28], muxed_data_in[29], muxed_data_in[30], muxed_data_in[31]};
+	assign bd_dout[15:00]= { muxed_data_in[00], muxed_data_in[01], muxed_data_in[02], muxed_data_in[03], 
+			         muxed_data_in[04], muxed_data_in[05], muxed_data_in[06], muxed_data_in[07], 
+			         muxed_data_in[08], muxed_data_in[09], muxed_data_in[10], muxed_data_in[11], 
+			         muxed_data_in[12], muxed_data_in[13], muxed_data_in[14], muxed_data_in[15]};
+	assign bd_radr[7:0] = { rd_addr[0], rd_addr[1], rd_addr[2], rd_addr[3], rd_addr[4], rd_addr[5], rd_addr[6], rd_addr[7] };
+	assign bd_wadr[7:0] = { wr_addr[0], wr_addr[1], wr_addr[2], wr_addr[3], wr_addr[4], wr_addr[5], wr_addr[6], wr_addr[7] };
 `endif
     reg [1:0] rd_dout_sel;
     always @(posedge clk)
