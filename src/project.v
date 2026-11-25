@@ -49,7 +49,7 @@ module tt_um_fpga_io(
    	wire [31:0] efpga_din, efpga_dout;
 	reg nrst_config;
 
-`define EMU_UART
+//`define EMU_UART
 `ifdef EMU_UART
   	micro_uart i_uart (
     	.clk,
@@ -73,7 +73,7 @@ module tt_um_fpga_io(
         .T_top			( uio_oeb[3:0] ),
         // System
         .CLK			( clk ),
-        .resetn			( rst_n & nrst_config ),
+        .resetn			( rst_n ), // not sure if we have to reset each time we config???
 		// Parallel config (Use this)
         .SelfWriteStrobe( config_strobe ),
         .SelfWriteData	( config_data ),
@@ -171,7 +171,10 @@ module tt_um_fpga_io(
 	assign re_fabric    = ( byte_strobe && cmd_data == 8'd02 && spi_bitcount == 8  ) ? 1'b1 : 1'b0;
 
 	always @(posedge clk) 
-		nrst_config	<= ( cmd_data == 8'h00 && spi_bitcount >= 16 && spi_bitcount < 24 ) ? 1'b0 : 1'b1;
+		nrst_config	<= 	( !rst_n ) ? 1 : // normally in run mode (config held in reset)
+						( cmd_data == 8'h00 && spi_bitcount == 16 && byte_strobe ) ? 1'b0: // at start of config take it out of reset momentarirly
+						( spi_bitcount == 0 && config_strobe ) ? 1'b1 : nrst_config;// after config put efpga into run mode
+
 
 	//////////////////////////////////////////////////
 	// eFPGA config interface
@@ -179,11 +182,13 @@ module tt_um_fpga_io(
 	reg [31:0] config_reg;
 	always @(posedge clk) 
 		config_reg <= ( !rst_n ) ? 0 : ( we_config ) ? wdata : config_reg;
-	assign config_data = config_reg;
-	reg [3:0] cyc_cnt;
+	assign config_data = config_reg; 
+	reg [3:0] cyc_cnt, cyc_stb;
 	always @(posedge clk) 
 		cyc_cnt <= ( !rst_n ) ? 0 : ( we_config ) ? 1 : ( cyc_cnt != 0 ) ? cyc_cnt + 1 : cyc_cnt; // 16 cycle seqence
-	assign config_strobe = cyc_cnt[3]; // 8 cycles of setup, and 8 cycle strobe for any slow latches.
+	always @(posedge clk) 
+		cyc_stb <= ( cyc_cnt == 4'd8 ) ? 1'b1 : 1'b0;
+	assign config_strobe = cyc_stb; // 8 cycles of setup, and 8 cycle strobe for any slow latches.
 
 	//////////////////////////////////////////////////
 	// Itegrate a ratio pwm writable register

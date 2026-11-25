@@ -103,12 +103,14 @@ module tb ();
 			@(negedge spi_clk);
 		
 		// Now send FPGA config bitstream
-		ch = 32'hFAB0FAB1; // magic first config word
-		for( ii = 31; ii >= 0; ii = ii - 1 ) begin // msb first
-			spi_mosi = ch[ii];
-			@(negedge spi_clk);
-		end
+
+		//ch = 32'hFAB0FAB1; // magic first config word, already in the bitstream
+		//for( ii = 31; ii >= 0; ii = ii - 1 ) begin // msb first
+		//	spi_mosi = ch[ii];
+		//	@(negedge spi_clk);
+		//end
 		// Send the binary data
+
         c = $fgetc(fd);
     	while ( c != -1 ) begin
         	$display("Read byte = %02x", c[7:0]);
