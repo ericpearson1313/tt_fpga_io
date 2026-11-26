@@ -184,7 +184,7 @@ module efpga_chip
 	always @(posedge clk) begin
 		count <= count + 1;
 	end
-	assign anain[8:5] = 3'b111; //count[24:21];
+	//assign anain[8:5] = 3'b111; //count[24:21];
 
 
 	/////////////////////////////////
@@ -202,37 +202,26 @@ module efpga_chip
 	logic [11:0] fpga_probe3;	
 
 	
-	// DEPLOY Chip CORE emulation/test
+	// E-FPGA IO Chip CORE emulation/test
 	// Instantiate core
 
-	
-	ldt_core i_core (
-		.clk			( clk		     ),
-		.reset		( reset 		   ),
+	logic [7:0] ui_in, uo_out, uio_in, uio_out, uio_oe;
+	tt_um_fpga_io i_core (
+		.clk			( clk		   ),
+		.rst_n		( !reset  	),
+		.ena			( 1'b1      ),
 		// Chip Inputs
-		.dip_sw 		( { sw8, sw4, sw2, sw1 } ),
-		.cont_sense	( cont_sense	), 
-		// Chip Outputs
-		.cont_enable( cont_enable	),
-		.speaker		( ldt_speaker		),
-		.speaker_n	( ldt_speaker_n    ),
-		.charge		( charge			),
-		.dump			( dump			),
-		.deploy		( deploy			),
-		.status_led ( status_led	),
-		// I2C bidir ports connection to accel
-		.sda_in		( sda_in			),
-		.sda_oe		( sda_oe			),
-		.sda_out		( sda_out		),
-		.scl_in		( scl_in			),
-		.scl_oe		( scl_oe			),
-		.scl_out		( scl_out		),
-		// Internal monitor of accel readings
-		.x	 			( fpga_probe 	),
-		.y	 			( fpga_probe2 	),
-		.z	 			( fpga_probe3 	)		
+		.ui_in		( ui_in		),
+		.uo_out  	( uo_out		),
+		.uio_in		( uio_in 	),
+		.uio_out		( uio_out	),
+		.uio_oe		( uio_oe		)
 	);
 
+	assign uio_in = { 4'b0000, !sw8, !sw4, !sw2, !sw1 };
+	assign ui_in  = { 8'h5F };
+	assign anain[8:5] = ~uio_out[3:0];
+	
   	//////////////////////
   	//////////////////////
 	//
@@ -272,76 +261,11 @@ module efpga_chip
 	// System Model
   	/////////////////////
 
-	// Wire up an accel sim model 
-`ifdef ACCEL_SIM
-	wire [11:0] x, y, z; // accell inputs into model
-	accel_slave i_accel_sim (
-    	.clk(clk),
-    	.reset(reset),
-		.en( 1 ),
-    	.sda( sda_in )     ,
-    	.sda_oe( sda_soe )     ,
-    	.scl( scl_in ) ,
-    	.x( x ),
-    	.y( y ),
-    	.z( z )
-	);
-	assign x = ( key == 5'h1A ) ?  1250 :
-				  ( key == 5'h1B ) ? -1250 : 0;
-	assign y = count[25-:12];
-	assign z = count[28-:12];
-`endif
 
   	/////////////////////
 	// Bus Monitor
   	/////////////////////
 
-	// filter SDA/SCL for monitoring real signals
-	logic [16:0] sh_sda, sh_scl;
-	always @(posedge clk) begin
-		sh_sda <= ( reset ) ? 17'h1FFFF : { sh_sda[15:0], sda_in };
-		sh_scl <= ( reset ) ? 17'h1FFFF : { sh_scl[15:0], scl_in };
-	end
-	logic filt_sda, filt_scl;
-	always @(posedge clk) begin
-		filt_sda <= ( reset ) ? 1'b1 : ( &sh_sda[16-:15] ) ? 1'b1 : ( !(|sh_sda[16-:15])) ? 1'b0 : filt_sda;
-		filt_scl <= ( reset ) ? 1'b1 : ( &sh_scl[16-:15] ) ? 1'b1 : ( !(|sh_scl[16-:15])) ? 1'b0 : filt_scl;
-	end
-
-		
-
-	wire [11:0] xm, ym, zm; // monitor outputs
-	wire strobe, data_strobe;
-	wire [7:0] data;
-	wire nack;
-	accel_monitor i_accel_mon (
-    	.clk(clk),
-    	.reset(reset),
-		.en( 1 ),
-    	.sda( filt_sda ) , // Monitor pin inputs
-    	.scl( filt_scl ) ,
-		.strobe( strobe ),
-    	.x( xm ),
-    	.y( ym ),
-    	.z( zm ),
-		.data( data ),
-		.nack( nack ),
-		.data_strobe( data_strobe )
-	);
-
-	// Big buffer of last 11 byte
-	// for display
-	logic [22:0][7:0] buf11, buf23;
-	always_ff @(posedge clk)
-		buf23 <= ( data_strobe ) ? { buf23[21:0], data } : buf23;
-	always_ff @(posedge clk)
-		buf11 <= ( strobe ) ? buf23 : buf11;
-
-	logic [22:0] nbuf11, nbuf23;
-	always_ff @(posedge clk)
-		nbuf23 <= ( data_strobe ) ? { nbuf23[21:0], nack } : nbuf23;
-	always_ff @(posedge clk)
-		nbuf11 <= ( strobe ) ? nbuf23 : nbuf11;	
 	
 	//////////////////////////
 	// Local calc on Monitors
@@ -349,11 +273,11 @@ module efpga_chip
 
 	// Scope monitor probes 
 	logic signed [4:0][11:0] probe;
-	assign probe[0] = xm;	// x
-	assign probe[1] = ym;	// y
-	assign probe[2] = zm; 	// z
-	assign probe[3] = fpga_probe;
-	assign probe[4] = { 2'h0, sw8, sw4, sw2, sw1, 6'h00 }; 
+	assign probe[0] = 100;	
+	assign probe[1] = 200;	
+	assign probe[2] = 400; 	
+	assign probe[3] = 800;
+	assign probe[4] = 1000; 
 
 	
 	//////////////////////////////
@@ -388,13 +312,13 @@ module efpga_chip
 	// monitor 8x chip I/O pins
 	
 	assign dig_mon = { 
-							cont_sense		,
-							cont_enable		,
-							speaker			,
-							charge			,
-							dump				, 
-							deploy			,
-							status_led		,
+							1'b0	,
+							1'b0	,
+							1'b0	,
+							1'b0	,
+							1'b0	, 
+							1'b0	,
+							1'b0	,
 							1'b0
 						};	
 							
@@ -415,8 +339,8 @@ module efpga_chip
 	
 	// Fast scope Inputs
 	assign fast_clk = clk_out; //(6mhz)
-	assign fast_cs = scl_in; // triggered on rising edge
-	assign fast_data = { filt_scl, filt_sda, scl_in, sda_in }; // bottom to top
+	assign fast_cs = 0; // triggered on rising edge
+	assign fast_data = 4'b0000; // bottom to top
 	
 	/////////////////////////////////
 	////
@@ -1017,10 +941,10 @@ module efpga_chip
 	//string_overlay #(.LEN(1)) _res2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d110),.y('d5), .out( res_str[2] ), .str(".") );
 	//hex_overlay    #(.LEN(1)) _res3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char)    , .x('d111),.y('d5), .out( res_str[3] ), .in( { igniter_res[4:1] ^ 4'hF } ) );
 	//string_overlay #(.LEN(11))_res4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d117),.y('d5), .out( res_str[4] ), .str("(3E.E=Open)") );
-	hex_overlay    #(.LEN(24)) _res1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char)    , .x('d90),.y('d13), .out( res_str[1] ), .in( buf11[22-:12] ) );
-	hex_overlay    #(.LEN(22)) _res2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char)    , .x('d90),.y('d15), .out( res_str[2] ), .in( buf11[10:0] ) );
-	bin_overlay    #(.LEN(12)) _res3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .bin_char(bin_char)    , .x('d90), .y('d14), .out( bin_str[0] ), .in( nbuf11[22-:12] ) );
-	bin_overlay    #(.LEN(11)) _res4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .bin_char(bin_char)    , .x('d90), .y('d16), .out( bin_str[1] ), .in( nbuf11[10:0] ) );
+	//hex_overlay    #(.LEN(24)) _res1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char)    , .x('d90),.y('d13), .out( res_str[1] ), .in( buf11[22-:12] ) );
+	//hex_overlay    #(.LEN(22)) _res2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char)    , .x('d90),.y('d15), .out( res_str[2] ), .in( buf11[10:0] ) );
+	//bin_overlay    #(.LEN(12)) _res3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .bin_char(bin_char)    , .x('d90), .y('d14), .out( bin_str[0] ), .in( nbuf11[22-:12] ) );
+	//bin_overlay    #(.LEN(11)) _res4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .bin_char(bin_char)    , .x('d90), .y('d16), .out( bin_str[1] ), .in( nbuf11[10:0] ) );
 	
 	// Port Names
 	logic [5:0] in_str;
