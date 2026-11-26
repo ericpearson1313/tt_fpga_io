@@ -94,6 +94,35 @@ module tb ();
 		for( ii = 0; ii < 10; ii = ii + 1 ) @(negedge spi_clk);
 		
 		////////////////////////
+		// Send the CMD=2;
+		////////////////////////
+		// Assert bit 30 on fpga fabric input port, 
+		// It will late3r become the reset for loaded logic
+
+		spi_mosi = 0;
+		spi_ncs  = 0;
+
+		ch = 2; // cmd byte
+		for( ii = 7; ii >= 0; ii = ii - 1 ) begin // msb first
+			spi_mosi = ch[ii];
+			@(negedge spi_clk);
+		end
+
+		ch = 32'h4000_0000; // Sets future reset input to loaded fpga logic
+		for( ii = 31; ii >= 0; ii = ii - 1 ) begin // msb first
+			spi_mosi = ch[ii];
+			@(negedge spi_clk);
+		end
+
+		spi_mosi = 0;
+		spi_ncs  = 1;
+		@(negedge spi_clk);
+			
+		// wait 10 spi clks idle
+		for( ii = 0; ii < 8; ii = ii + 1 ) // First byte 00
+			@(negedge spi_clk);
+		
+		////////////////////////
 		// Send the CMD=0;
 		////////////////////////
 

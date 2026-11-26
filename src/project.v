@@ -208,7 +208,7 @@ module tt_um_fpga_io(
 	reg [31:0] efpga_dout_reg;
 	always @(posedge clk) begin
 		efpga_din_reg[0]     <= we_fabric;
-		efpga_din_reg[31:1]  <= ( !rst_n ) ? 0 : ( we_fabric     ) ? wdata : efpga_din_reg[31:1];
+		efpga_din_reg[31:1]  <= ( !rst_n ) ? 0 : ( we_fabric     ) ? wdata[31:1] : efpga_din_reg[31:1];
 		efpga_dout_reg[0]    <= ( !rst_n ) ? 0 : ( efpga_dout[0] ) ? 1 : ( re_fabric ) ? 0 : efpga_dout_reg[0]; // mail flag
 		efpga_dout_reg[31:1] <= ( !rst_n ) ? 0 : ( efpga_dout[0] ) ? efpga_dout[31:1] : efpga_dout_reg[31:1];
 	end

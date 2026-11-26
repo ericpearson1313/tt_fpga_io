@@ -10,14 +10,10 @@ module micro_uart (
     output wire [3:0] io_oeb
 `ifdef EMU_UART
     ,input wire [31:0] port_din,
-	output wire [31:0] port_dout,
-	input wire reset
-	);
-`else
+	output wire [31:0] port_dout
+`endif
 	);
 	wire reset;
-	assign reset = 0;
-`endif
 
 	// Connect up eFPGA's real I/O
     wire rx; // rs232 rx input
@@ -25,6 +21,7 @@ module micro_uart (
     assign io_out = { 2'b00, rx, 1'b0 }; // loopback rx
     assign io_oeb = { 4'b1001 }; // output disable Rx
 
+`ifdef ORIGINAL 
     // metastable
     reg [1:0] cc;
     always @(posedge clk)
@@ -46,6 +43,17 @@ module micro_uart (
     // Falling Edge flag for start bit detection
     wire fall; 
     assign fall = ( reset ) ? 1'b0 : ( rxf && !del && !cc[1] ) ? 1'b1 : 1'b0;
+`else // Rx is externally registered/filtered/syncrromous with clock.A
+	// baudx8 from teh port_din[31];
+	reg baudx8;
+
+	// input sampling and falling edge det
+    reg rxf;
+    always @(posedge clk) 
+		rxf <= ( reset ) ? 1'b1 : ( baudx8 ) ? rx : rxf;
+    wire fall;
+	assign fall = rxf & !rx & baudx8;
+`endif
 
     // counter
     reg [6:0] count; // from -14 to 56, with sampels at 0, 8, ... 56.
@@ -94,7 +102,7 @@ module micro_uart (
 	// connect up baud rate input
     always @(posedge clk)
 		baudx8 <= port_din[31];
-
+	assign reset = port_din[30];
 	// Connect up swap strobe from asic
 	wire swap_strobe;
 	assign swap_strobe = port_din[0];
