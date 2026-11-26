@@ -74,6 +74,13 @@ module tb ();
 	integer ii, jj;
 	reg [31:0] ch, sreg;
 
+
+	// Test string regs
+	reg [127:0] in_string, test_string;
+	wire test_pass;
+	assign test_pass = ( test_string == "Test String 123\n" ) ? 1'b1 : 1'b0;
+
+
 	initial begin
 		spi_ncs = 1;
 		spi_mosi = 0;
@@ -220,8 +227,13 @@ module tb ();
 			spi_mosi = 0;
 			spi_ncs  = 1;
 
-			if( sreg[0] )
+			if( sreg[0] ) begin
 				$display( "%x %x (%c)\n", sreg, sreg[15:8], sreg[15:8] );
+				in_string = { in_string[127-8:0], sreg[15:8] };
+				if( sreg[15:8] == "\n" )
+					test_string = in_string;
+				$display( "input [%s] test [%s] Pass %x\n", in_string, test_string, test_pass );
+			end
 
 			// wait 10 spi clks idle
 			for( ii = 0; ii < 8; ii = ii + 1 ) // First byte 00

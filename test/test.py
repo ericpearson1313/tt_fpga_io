@@ -41,3 +41,5 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 50000 )
 
+    # the TB contains the test logic
+    assert dut.test_pass.value == 1
