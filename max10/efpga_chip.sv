@@ -12,37 +12,19 @@ module efpga_chip
 
 (
 	/////////////
-	// LPC CHIP IO
+	// EFC I/O
 	/////////////
 
 
-	// Accel i2c exernal pullups
-`ifndef ACCEL_SIM	
-	inout sda,  					// pin 132
-	inout scl,  					// pin 65
-`endif // ACCEL_SIM	
-
-	// Cont_sense
-	input  logic cont_sense, 	// pin 105
-	output logic cont_enable,	// pin 102
+	// SPI PortA (front pannel signals)
+	inout ttspi_miso,
+	input logic ttspi_mosi,
+	input logic ttspi_clk,
+	input logic ttspi_ncs,
 	
-	// Speaker/Led
-	output logic speaker, 		// pin 99
-	output logic speaker_n, 	// pin 101
-	output logic status_led,	// pin 66
-	
-	// Controls
-	output logic charge, 		// pin 106
-	output logic dump,   		// pin 140
-	output logic deploy, 		// pin 127
-	
-	// Disp switch
-	input logic	sw1,				// pin 62
-	input logic	sw2,				// pin 135
-	input logic	sw4,				// pin 124
-	input logic	sw8,				// pin 100
-	
-	
+	// Serial Port (serial port driver/receiver chip buffer)
+	input 	logic rx232,
+	output	logic tx232,	
 	
 	////////////
 	// DEBUG IO
@@ -54,6 +36,8 @@ module efpga_chip
 	// Bank 7, keypad input
 	inout [6:0] digio,
 
+	// Bank ?, speaker 
+	output spk_out,
 	
 	// SPI8 Bus, to PSRAM
 	inout  wire [7:0]  spi8_data_pad,   //   pad_io.export
@@ -94,19 +78,15 @@ module efpga_chip
 	
 
 	
-	// Trisate I/Os I2c bus
-`ifndef ACCEL_SIM	
-	ioe_pad i_sda(.din(sda_out),.dout(sda_in),.oe(sda_oe),.pad_io(sda));
-	ioe_pad i_scl(.din(scl_out),.dout(scl_in),.oe(scl_oe),.pad_io(scl));
-`endif
-	
-	// Hook to simualted port
-`ifdef ACCEL_SIM
-	logic sda_soe;
-	assign scl_in = ( scl_oe ) ? 0 : 1;
-	assign sda_in = ( sda_oe || sda_soe ) ? 0 : 1;
-`endif
+	// Trisate spi Miso pin directly by 
+	logic ttmiso_out, ttmiso_oe;
+	ioe_pad i_miso( .din(ttmiso_out),.dout(),.oe(ttmiso_oe),.pad_io(ttspi_miso));
 
+	// Loopback Tx from Rx;
+	
+	assign tx232 = rx232;
+	
+	// infrsastrustion keypad
 	logic [4:0] key; // keypad, bit 4 indicates pressed
 	
 	// Speaker (piezo test)
@@ -136,10 +116,7 @@ module efpga_chip
 		end
 	end
 	
-	logic ldt_speaker, ldt_speaker_n;
-	assign speaker = ldt_speaker | ( spk_toggle & spk_en ); 
-	assign speaker_n = ldt_speaker_n | ( !spk_toggle & spk_en );
-
+	assign spk_out = spk_toggle & spk_en;
 	
 
 	// PLL (only 1 PLL in E144 package!)
@@ -178,7 +155,7 @@ module efpga_chip
 
 
 	// AIN LED Display with counter
-	assign anain[4:1] = 0; // active low leds
+	//assign anain[4:1] = 0; // active low leds
 
 	logic [31:0] count;
 	always @(posedge clk) begin
@@ -207,8 +184,8 @@ module efpga_chip
 
 	logic [7:0] ui_in, uo_out, uio_in, uio_out, uio_oe;
 	tt_um_fpga_io i_core (
-		.clk			( clk		   ),
-		.rst_n		( !reset  	),
+		.clk			( clk_out   ), // 6 Mhz
+		.rst_n		( !reset  	), 
 		.ena			( 1'b1      ),
 		// Chip Inputs
 		.ui_in		( ui_in		),
@@ -217,10 +194,14 @@ module efpga_chip
 		.uio_out		( uio_out	),
 		.uio_oe		( uio_oe		)
 	);
+	
+	// Connect up efpga I/O
 
-	assign uio_in = { 4'b0000, !sw8, !sw4, !sw2, !sw1 };
-	assign ui_in  = { 8'h5F };
-	assign anain[8:5] = ~uio_out[3:0];
+	assign ttmiso_out = uio_out[7];
+	assign ttmiso_oe  = uio_oe[7];
+	assign uio_in = { 1'b0, ttspi_mosi, ttspi_ncs, ttspi_clk, 3'b000, rx232 };
+	assign ui_in  = { 8'h00 }; // unused?
+	assign anain[8:1] = ~uio_out[7:0]; // connect teh efpga LED outputs, active high to active low out inversion
 	
   	//////////////////////
   	//////////////////////
@@ -256,16 +237,41 @@ module efpga_chip
 		
 	end
 	
+
+  	/////////////////////
+	// Bus Monitor: Rs232
+  	/////////////////////
+
+	// we'll use the micro_uart and a baud rate generator
+	logic baudx8;
+	logic [31:0] fpga_dout;
+	logic [7:0] rx_data;
+	logic [7:0] rx_strobe;
 	
-	/////////////////////
-	// System Model
+  	micro_uart i_uart (
+    	.clk( clk ),
+    	.io_in(  { 3'b000, rx232 } ),
+    	.io_out(  ),
+    	.io_oeb(  ),
+		// emulation only I/O
+      //.reset    ( !rst_n ),
+      .port_din( { baudx8, 31'b0 } ),
+    	.port_dout( fpga_dout )
+	);	
+	
+	assign rx_data   = fpga_dout[15:8];
+	assign rx_strobe = fpga_dout[0];
+	
+	logic [0:9][7:0] rx_string; // will be display on teh HDMI OVerlay
+	
+	always @(posedge clk) 
+		rx_string <= ( rx_strobe ) ? { rx_string[1:9], rx_data } : rx_string;
+	
+	
+	
   	/////////////////////
-
-
+	// Bus Monitor: SPI
   	/////////////////////
-	// Bus Monitor
-  	/////////////////////
-
 	
 	//////////////////////////
 	// Local calc on Monitors
@@ -279,7 +285,6 @@ module efpga_chip
 	assign probe[3] = 800;
 	assign probe[4] = 1000; 
 
-	
 	//////////////////////////////
 	//////////////////////////////
 	//
@@ -339,8 +344,8 @@ module efpga_chip
 	
 	// Fast scope Inputs
 	assign fast_clk = clk_out; //(6mhz)
-	assign fast_cs = 0; // triggered on rising edge
-	assign fast_data = 4'b0000; // bottom to top
+	assign fast_cs = ~ttspi_ncs; // triggered on rising edge
+	assign fast_data = { ttmiso_out, ttspi_mosi, ttspi_ncs, ttspi_clk }; //fast_data
 	
 	/////////////////////////////////
 	////
@@ -948,21 +953,21 @@ module efpga_chip
 	
 	// Port Names
 	logic [5:0] in_str;
-   string_overlay #(.LEN(4)) _in0 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h01), .out( in_str[0]), .str("Xmon") );
-	string_overlay #(.LEN(4)) _in1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h03), .out( in_str[1]), .str("Ymon") );
-	string_overlay #(.LEN(4)) _in2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h05), .out( in_str[2]), .str("Zmon") );
-	string_overlay #(.LEN(4)) _in3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h07), .out( in_str[3]), .str("fpga") );
-	string_overlay #(.LEN(5)) _in4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h09), .out( in_str[4]), .str("fpga2") );
-	string_overlay #(.LEN(5)) _in5 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h0B), .out( in_str[5]), .str("fpga3") );
+   string_overlay #(.LEN(5)) _in0 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h01), .out( in_str[0]), .str("RS232") );
+	string_overlay #(.LEN(10)) _in1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h03), .out( in_str[1]), .str(rx_string) );
+	//string_overlay #(.LEN(4)) _in2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h05), .out( in_str[2]), .str("Zmon") );
+	//string_overlay #(.LEN(4)) _in3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h07), .out( in_str[3]), .str("fpga") );
+	//string_overlay #(.LEN(5)) _in4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h09), .out( in_str[4]), .str("fpga2") );
+	//string_overlay #(.LEN(5)) _in5 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h0B), .out( in_str[5]), .str("fpga3") );
 	
 	// 12bit hex overlays(4)
 	logic [5:0] hex_str;
-	hex_overlay #(.LEN(3)) _hex0 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h01), .out( hex_str[0]), .in( xm ) );
-	hex_overlay #(.LEN(3)) _hex1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h03), .out( hex_str[1]), .in( ym ) );
-	hex_overlay #(.LEN(3)) _hex2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h05), .out( hex_str[2]), .in( zm ) );
-	hex_overlay #(.LEN(3)) _hex3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h07), .out( hex_str[3]), .in( fpga_probe ) );
-	hex_overlay #(.LEN(3)) _hex4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h09), .out( hex_str[4]), .in( fpga_probe2 ) );
-	hex_overlay #(.LEN(3)) _hex5 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h0B), .out( hex_str[5]), .in( fpga_probe3 ) );
+	//hex_overlay #(.LEN(3)) _hex0 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h01), .out( hex_str[0]), .in( xm ) );
+	//hex_overlay #(.LEN(3)) _hex1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h03), .out( hex_str[1]), .in( ym ) );
+	//hex_overlay #(.LEN(3)) _hex2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h05), .out( hex_str[2]), .in( zm ) );
+	//hex_overlay #(.LEN(3)) _hex3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h07), .out( hex_str[3]), .in( fpga_probe ) );
+	//hex_overlay #(.LEN(3)) _hex4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h09), .out( hex_str[4]), .in( fpga_probe2 ) );
+	//hex_overlay #(.LEN(3)) _hex5 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .hex_char(hex_char), .x('h4B),.y('h0B), .out( hex_str[5]), .in( fpga_probe3 ) );
 					
 	// dump binary	values	
 	logic [3:0] bin_str;

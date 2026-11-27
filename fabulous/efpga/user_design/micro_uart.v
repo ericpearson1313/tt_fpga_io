@@ -1,7 +1,7 @@
 // vim: ts=4: 
 `default_nettype none
 
-//`define EMU_UART
+`define EMU_UART
 
 module micro_uart (
     input wire clk,

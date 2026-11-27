@@ -51,6 +51,7 @@ module tt_um_fpga_io(
 	assign spi_ncs = uio_in[5];
 	assign spi_mosi= uio_in[6];
 	assign uio_out[7] = spi_miso;
+	assign uio_out[6:4] = 3'b000;
 	assign uio_oe[7]  = !spi_ncs; // active low spi cs
 
 	// invert iob for FAB -> TT
@@ -62,10 +63,10 @@ module tt_um_fpga_io(
    	wire [31:0] efpga_din, efpga_dout;
 	wire [7:0] efpga_config; 
 
-//`define EMU_UART
+`define EMU_UART
 `ifdef EMU_UART
   	micro_uart i_uart (
-    	.clk,
+    	.clk(clk),
     	.io_in(  uio_in[3:0] ),
     	.io_out( uio_out[3:0] ),
     	.io_oeb( uio_oeb[3:0] ),

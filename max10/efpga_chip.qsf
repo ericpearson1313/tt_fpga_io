@@ -188,6 +188,7 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to sw8
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to sw4
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to sw2
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to sw1
+set_global_assignment -name VERILOG_FILE ../fabulous/efpga/user_design/micro_uart.v
 set_global_assignment -name VERILOG_FILE ../src/config_UART.v
 set_global_assignment -name QIP_FILE ufm_flash_m25/synthesis/ufm_flash.qip
 set_global_assignment -name VERILOG_FILE ../fabulous/efpga/Test/build/fabric_files/W_IO_switch_matrix.v
