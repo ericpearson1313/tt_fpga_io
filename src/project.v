@@ -18,9 +18,9 @@ module tt_um_fpga_io(
 );
 
   	// All output pins must be assigned. If not used, assign to 0.
-  	assign uo_out[7:3]  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-	assign uio_out[7:4] = 0;
-	assign uio_oe[7:4] = 0;
+  	//assign uo_out[7:3]  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+	//assign uio_out[7:4] = 0;
+	//assign uio_oe[7:4] = 0;
 
   	// List all unused inputs to prevent warnings
   	wire _unused = &{ena, clk, rst_n, 1'b0};
@@ -31,23 +31,36 @@ module tt_um_fpga_io(
 	//
 	//////////////////////////////////////////////////
 
-	// User Leds
+
+	// Output Bits connect
+	wire [7:0] efpga_led;
 	wire config_led;
-	wire run_led;
-	assign uo_out[1] = config_led;
-	assign uo_out[2] = 1; // run_led;
+	assign uo_out[0] = config_led;
+	assign uo_out[7:1] = efpga_led[7:1]; // run_led
 	
-  	//Config related ports
+  	//Config related ports on fpga
   	wire config_strobe;
   	wire [31:0] config_data;
 
+	// The spi port
+	wire spi_clk;
+	wire spi_ncs;
+	wire spi_mosi;
+	wire spi_miso;
+	assign spi_clk = uio_in[4];
+	assign spi_ncs = uio_in[5];
+	assign spi_mosi= uio_in[6];
+	assign uio_out[7] = spi_miso;
+	assign uio_oe[7]  = !spi_ncs; // active low spi cs
+
 	// invert iob for FAB -> TT
 	wire [3:0] uio_oeb;
-	assign uio_oe[3:0] = ~uio_oeb;
+	assign uio_oe[3:0] = ~uio_oeb[3:0];
+	assign uio_oe[6:4] = 3'b000; // spi inputs
 
     // efpga fabric's user_design's data port
    	wire [31:0] efpga_din, efpga_dout;
-	reg nrst_config;
+	wire [7:0] efpga_config; 
 
 //`define EMU_UART
 `ifdef EMU_UART
@@ -57,7 +70,7 @@ module tt_um_fpga_io(
     	.io_out( uio_out[3:0] ),
     	.io_oeb( uio_oeb[3:0] ),
 		// emulation only I/O
-        .reset    ( !rst_n ),
+        //.reset    ( !rst_n ),
         .port_din(  efpga_din ),
     	.port_dout( efpga_dout )
 	);
@@ -85,10 +98,10 @@ module tt_um_fpga_io(
         .s_clk			( 1'b0 ),
         .s_data			( 1'b0 ),
 		// Backdoor
-    	.bd0_din(  efpga_din ),
+    	.bd0_din(  efpga_din  ),
     	.bd0_dout( efpga_dout ),
-    	.bd0_radr( ),
-    	.bd0_wadr( )
+    	.bd0_radr( efpga_led  ),
+    	.bd0_wadr( efpga_config )
 	);
 `endif // EMU
 
@@ -97,16 +110,6 @@ module tt_um_fpga_io(
 	// SPI Slave Interface
 	//
 	//////////////////////////////////////////////////
-
-	wire spi_clk;
-	wire spi_ncs;
-	wire spi_mosi;
-	wire spi_miso;
-	
-	assign spi_clk = ui_in[0];
-	assign spi_ncs = ui_in[1];
-	assign spi_mosi= ui_in[2];
-	assign uo_out[0] = spi_miso;
 
 	// Metastable spi inputs
 	reg [8:0] spi_cc;
@@ -164,6 +167,7 @@ module tt_um_fpga_io(
 	wire we_pwm; // laod data into ratio pwm
 	wire we_fabric; // load fabric data iin reg
 	wire re_fabric; // fabic data out reg will be registered based on en=rd
+	reg nrst_config;
 
 	assign we_config 	= ( byte_strobe && cmd_data == 8'h00 && spi_bitcount >= 40 && spi_bitcount[4:0] == 8) ? 1'b1 : 1'b0;
 	assign we_pwm 		= ( byte_strobe && cmd_data == 8'h01 && spi_bitcount == 40 ) ? 1'b1 : 1'b0;

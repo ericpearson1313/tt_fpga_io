@@ -26,18 +26,19 @@ module tb ();
   reg rs232;
   reg spi_clk, spi_ncs, spi_mosi;
   wire spi_miso;
+	wire dummy;
   // Replace tt_um_example with your module name:
   tt_um_fpga_io user_project (
-      .ui_in  ({ ui_in[7:3], spi_mosi, spi_ncs, spi_clk }),    // Dedicated inputs
+      .ui_in  (ui_in),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
-      .uio_in ({uio_in[7:1],rs232}),   // IOs: Input path
+      .uio_in ({ dummy, spi_mosi, spi_ncs, spi_clk, uio_in[3:1],rs232}),   // IOs: Input path
       .uio_out(uio_out),  // IOs: Output path
       .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
       .ena    (ena),      // enable - goes high when design is selected
       .clk    (clk),      // clock
       .rst_n  (rst_n)     // not reset
   );
-  assign spi_miso = uo_out[0];
+  assign spi_miso = uio_out[7];
 
   	// Rs232 stream generator, uio_in[0] into efgpa fabric user design, or micro_uart EMU
 	wire [0:127] str;
