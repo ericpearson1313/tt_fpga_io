@@ -247,10 +247,27 @@ module efpga_chip
 	logic [31:0] fpga_dout;
 	logic [7:0] rx_data;
 	logic [7:0] rx_strobe;
+
+	// CC the rx
+	logic [1:0] rxcc;
+	always @(posedge clk) 
+		rxcc <= { rxcc[0], rx232 };
 	
+	// 9600 baudx8
+	recip_pwm #(16) i_pwm ( .clk(clk), .rst( reset ), .n( 16'd1 ), .d( 16'd625 ), .pwm( baudx8 ) );
+	
+	// Filter cc input with 8xbaud
+	logic [1:0] rxin;
+	always @(posedge clk) 
+		rxin <= ( baudx8 ) ? { rxin[0], rxcc[1] } : rxin;
+	logic rxf;
+	always @(posedge clk) 
+		rxf <= ( baudx8 && rxin == 2'b00 ) ? 1'b0 : ( baudx8 && rxin == 2'b11 ) ? 1'b1 : rxf;
+	
+	// The micro uart
   	micro_uart i_uart (
     	.clk( clk ),
-    	.io_in(  { 3'b000, rx232 } ),
+    	.io_in(  { 3'b000, rxf } ),
     	.io_out(  ),
     	.io_oeb(  ),
 		// emulation only I/O
@@ -262,16 +279,28 @@ module efpga_chip
 	assign rx_data   = fpga_dout[15:8];
 	assign rx_strobe = fpga_dout[0];
 	
-	logic [0:9][7:0] rx_string; // will be display on teh HDMI OVerlay
+	logic [0:9][7:0] rx_string; // last 10 chars will be displayed on HDMI overlay
 	
 	always @(posedge clk) 
 		rx_string <= ( rx_strobe ) ? { rx_string[1:9], rx_data } : rx_string;
 	
 	
-	
   	/////////////////////
 	// Bus Monitor: SPI
   	/////////////////////
+
+	// we want to filter the incoming signals: clk, cs and mosi;
+	// CC, delay, filter
+
+	// Sheift data into regs for as long as active, up to first 5 bytes
+	// Also read back data logs as well.
+	
+	// Also display waves so we can see clock and data
+	
+	// WIll probably be runnig at 100Khz to start
+
+
+
 	
 	//////////////////////////
 	// Local calc on Monitors
