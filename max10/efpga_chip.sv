@@ -279,10 +279,10 @@ module efpga_chip
 	assign rx_data   = fpga_dout[15:8];
 	assign rx_strobe = fpga_dout[0];
 	
-	logic [0:9][7:0] rx_string; // last 10 chars will be displayed on HDMI overlay
+	logic [0:15][7:0] rx_string; // last 10 chars will be displayed on HDMI overlay
 	
 	always @(posedge clk) 
-		rx_string <= ( rx_strobe ) ? { rx_string[1:9], rx_data } : rx_string;
+		rx_string <= ( rx_strobe ) ? { rx_string[1:15], rx_data } : rx_string;
 	
 	
   	/////////////////////
@@ -982,8 +982,8 @@ module efpga_chip
 	
 	// Port Names
 	logic [5:0] in_str;
-   string_overlay #(.LEN(5)) _in0 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h01), .out( in_str[0]), .str("RS232") );
-	string_overlay #(.LEN(10)) _in1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h03), .out( in_str[1]), .str(rx_string) );
+   string_overlay #(.LEN(9)) _in0 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h01), .out( in_str[0]), .str("RS232 mon") );
+	string_overlay #(.LEN(16)) _in1 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h03), .out( in_str[1]), .str(rx_string) );
 	//string_overlay #(.LEN(4)) _in2 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h05), .out( in_str[2]), .str("Zmon") );
 	//string_overlay #(.LEN(4)) _in3 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h07), .out( in_str[3]), .str("fpga") );
 	//string_overlay #(.LEN(5)) _in4 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('h45),.y('h09), .out( in_str[4]), .str("fpga2") );
@@ -1007,14 +1007,14 @@ module efpga_chip
 
    // Text legend
    logic [7:0] leg_str;
-   string_overlay #(.LEN(8)) i_leg00 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+7), .out( leg_str[0] ), .str("cont_sns") );
-   string_overlay #(.LEN(8)) i_leg01 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+6), .out( leg_str[1] ), .str("cont_en ") );
-   string_overlay #(.LEN(8)) i_leg02 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+5), .out( leg_str[2] ), .str("speaker ") );
-   string_overlay #(.LEN(8)) i_leg03 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+4), .out( leg_str[3] ), .str("charge  ") );
-   string_overlay #(.LEN(8)) i_leg04 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+3), .out( leg_str[4] ), .str("dump    ") );
-   string_overlay #(.LEN(8)) i_leg05 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+2), .out( leg_str[5] ), .str("deploy  ") );
-   string_overlay #(.LEN(8)) i_leg06 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+1), .out( leg_str[6] ), .str("sts_led ") );
-   string_overlay #(.LEN(8)) i_leg07 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+0), .out( leg_str[7] ), .str("        ") );
+   //string_overlay #(.LEN(8)) i_leg00 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+7), .out( leg_str[0] ), .str("cont_sns") );
+   //string_overlay #(.LEN(8)) i_leg01 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+6), .out( leg_str[1] ), .str("cont_en ") );
+   //string_overlay #(.LEN(8)) i_leg02 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+5), .out( leg_str[2] ), .str("speaker ") );
+   //string_overlay #(.LEN(8)) i_leg03 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+4), .out( leg_str[3] ), .str("charge  ") );
+   //string_overlay #(.LEN(8)) i_leg04 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+3), .out( leg_str[4] ), .str("dump    ") );
+   //string_overlay #(.LEN(8)) i_leg05 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+2), .out( leg_str[5] ), .str("deploy  ") );
+   //string_overlay #(.LEN(8)) i_leg06 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+1), .out( leg_str[6] ), .str("sts_led ") );
+   //string_overlay #(.LEN(8)) i_leg07 (.clk(hdmi_clk), .reset(reset), .char_x(char_x), .char_y(char_y), .ascii_char(ascii_char), .x('d3),.y('d50+0), .out( leg_str[7] ), .str("        ") );
 	
 	// Merge overlays
 	logic overlay;
