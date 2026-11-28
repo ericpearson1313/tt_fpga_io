@@ -75,6 +75,8 @@ module tt_um_fpga_io(
         .port_din(  efpga_din ),
     	.port_dout( efpga_dout )
 	);
+	assign efpga_led = 8'h00;
+	assign efpga_config = 8'h00;
 `else // eFPGA
   	my_eFPGA_top i_efpga (
         //External IO port (dunno what this means)
